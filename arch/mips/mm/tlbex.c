@@ -425,6 +425,7 @@ static void __cpuinit build_tlb_write_entry(u32 **p, struct uasm_label **l,
 	case CPU_BMIPS4380:
 	case CPU_BMIPS5000:
 	case CPU_LOONGSON2:
+	case CPU_LOONGSON3:
 	case CPU_R5500:
 		if (m4kc_tlbp_war())
 			uasm_i_nop(p);
@@ -1223,7 +1224,7 @@ static void __cpuinit build_r4000_tlb_refill_handler(void)
 	 * unused.
 	 */
 	/* Loongson2 ebase is different than r4k, we have more space */
-#if defined(CONFIG_32BIT) || defined(CONFIG_CPU_LOONGSON2)
+#if defined(CONFIG_32BIT) || defined(CONFIG_CPU_LOONGSON2) || defined(CONFIG_CPU_LOONGSON3)
 	if ((p - tlb_handler) > 64)
 		panic("TLB refill handler space exceeded");
 #else

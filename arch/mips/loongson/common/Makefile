@@ -24,4 +24,9 @@ obj-$(CONFIG_CS5536) += cs5536/
 # Suspend Support
 #
 
-obj-$(CONFIG_LOONGSON_SUSPEND) += pm.o
+obj-$(CONFIG_SUSPEND) += pm.o
+
+#
+#Big memory Support
+#
+obj-$(CONFIG_LOONGSON_BIGMEM) += dma-swiotlb.o

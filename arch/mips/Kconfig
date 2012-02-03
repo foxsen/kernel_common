@@ -1188,6 +1188,15 @@ config CPU_LOONGSON2F
 	  have a similar programming interface with FPGA northbridge used in
 	  Loongson2E.
 
+config CPU_LOONGSON3A
+	bool "Loongson 3A"
+	depends on SYS_HAS_CPU_LOONGSON3A
+	select CPU_LOONGSON3
+	#select DMA_NONCOHERENT
+	help
+		The Loongson 3A processor implements the MIPS III instruction set
+		with many extensions.
+
 config CPU_MIPS32_R1
 	bool "MIPS32 Release 1"
 	depends on SYS_HAS_CPU_MIPS32_R1
@@ -1524,6 +1533,15 @@ config SYS_HAS_CPU_LOONGSON2F
 	select CPU_SUPPORTS_CPUFREQ
 	select CPU_SUPPORTS_ADDRWINCFG if 64BIT
 	select CPU_SUPPORTS_UNCACHED_ACCELERATED
+
+config CPU_LOONGSON3
+	bool
+	select CPU_SUPPORTS_32BIT_KERNEL
+	select CPU_SUPPORTS_64BIT_KERNEL
+	select CPU_SUPPORTS_HIGHMEM
+
+config SYS_HAS_CPU_LOONGSON3A
+	bool
 
 config SYS_HAS_CPU_MIPS32_R1
 	bool
@@ -2320,6 +2338,11 @@ config HW_HAS_EISA
 	bool
 config HW_HAS_PCI
 	bool
+config HT_PCI
+	bool "Support for using HT pci"
+	select PCI_DOMAINS
+	help
+		choose ht pci.
 
 config PCI
 	bool "Support for PCI controller"

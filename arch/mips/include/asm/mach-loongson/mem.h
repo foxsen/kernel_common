@@ -16,11 +16,14 @@
  *
  * in loongson2e, starts from 512M
  * in loongson2f, starts from 2G 256M
+ * in loongson3a, starts from 4G 256M
  */
 #ifdef CONFIG_CPU_LOONGSON2E
 #define LOONGSON_HIGHMEM_START	0x20000000
-#else
+#elif defined CONFIG_CPU_LOONGSON2F
 #define LOONGSON_HIGHMEM_START	0x90000000
+#elif defined CONFIG_CPU_LOONGSON3A
+#define LOONGSON_HIGHMEM_START	0x110000000
 #endif
 
 /*

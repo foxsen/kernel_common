@@ -69,7 +69,9 @@
 #define MACH_DEXXON_GDIUM2F10  5
 #define MACH_LEMOTE_NAS        6
 #define MACH_LEMOTE_LL2F       7
-#define MACH_LOONGSON_END      8
+#define MACH_LEMOTE_3A_A1004   8
+#define MACH_LEMOTE_3A_A1101   9
+#define MACH_LOONGSON_END      10
 
 /*
  * Valid machtype for group INGENIC

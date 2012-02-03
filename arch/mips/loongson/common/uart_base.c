@@ -30,6 +30,10 @@ void prom_init_loongson_uart_base(void)
 	case MACH_LEMOTE_LL2F:
 		loongson_uart_base = LOONGSON_PCIIO_BASE + 0x2f8;
 		break;
+	case MACH_LEMOTE_3A_A1004:
+	case MACH_LEMOTE_3A_A1101:
+		loongson_uart_base = LOONGSON_UART_BASE;
+		break;
 	case MACH_LEMOTE_ML2F7:
 	case MACH_LEMOTE_YL2F89:
 	case MACH_DEXXON_GDIUM2F10:

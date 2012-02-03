@@ -100,7 +100,13 @@ static inline void do_perfcnt_IRQ(void)
 #define LOONGSON_PCICFG_BASE	0x1fe80000
 #define LOONGSON_PCICFG_SIZE	0x00000800	/* 2K */
 #define LOONGSON_PCICFG_TOP	(LOONGSON_PCICFG_BASE+LOONGSON_PCICFG_SIZE-1)
+
+#ifdef CONFIG_HT_PCI
+#define LOONGSON_PCIIO_BASE	0xefdfc000000
+#else
 #define LOONGSON_PCIIO_BASE	0x1fd00000
+#endif
+
 #define LOONGSON_PCIIO_SIZE	0x00100000	/* 1M */
 #define LOONGSON_PCIIO_TOP	(LOONGSON_PCIIO_BASE+LOONGSON_PCIIO_SIZE-1)
 
@@ -108,6 +114,17 @@ static inline void do_perfcnt_IRQ(void)
 
 #define LOONGSON_PCICONFIGBASE	0x00
 #define LOONGSON_REGBASE	0x100
+
+/* Loongson3A HT address */
+#define LOONGSON_HTIO_BASE 0x90000efdfc000000
+#define LOONGSON_HTIO_SIZE 0x100000 /* 1MB */
+
+/* Loongson3A uart base */
+#ifdef CONFIG_CPU_UART
+#define LOONGSON_UART_BASE 0x1fe001e0 /* cpu uart */
+#else
+#define LOONGSON_UART_BASE 0x1ff003f8 /* cpu lpc uart */
+#endif
 
 /* PCI Configuration Registers */
 
@@ -242,13 +259,13 @@ static inline void do_perfcnt_IRQ(void)
 #define LOONGSON_PCIMAP_WIN(WIN, ADDR)	\
 	((((ADDR)>>26) & LOONGSON_PCIMAP_PCIMAP_LO0) << ((WIN)*6))
 
+/* Chip Config */
+#define LOONGSON_CHIPCFG0		LOONGSON_REG(LOONGSON_REGBASE + 0x80)
+
 #ifdef CONFIG_CPU_SUPPORTS_CPUFREQ
 #include <linux/cpufreq.h>
 extern void loongson2_cpu_wait(void);
 extern struct cpufreq_frequency_table loongson2_clockmod_table[];
-
-/* Chip Config */
-#define LOONGSON_CHIPCFG0		LOONGSON_REG(LOONGSON_REGBASE + 0x80)
 #endif
 
 /*

@@ -35,6 +35,7 @@
 #include <asm/cacheflush.h> /* for run_uncached() */
 
 
+#define SKIP_CACHEOP
 /*
  * Special Variant of smp_call_function for use by cache functions:
  *
@@ -342,6 +343,9 @@ static void __cpuinit r4k_blast_scache_setup(void)
 
 static inline void local_r4k___flush_cache_all(void * args)
 {
+#if defined(CONFIG_CPU_LOONGSON3) && defined(SKIP_CACHEOP)
+	return;
+#endif
 #if defined(CONFIG_CPU_LOONGSON2)
 	r4k_blast_scache();
 	return;
@@ -363,6 +367,9 @@ static inline void local_r4k___flush_cache_all(void * args)
 
 static void r4k___flush_cache_all(void)
 {
+#if defined(CONFIG_CPU_LOONGSON3) && defined(SKIP_CACHEOP)
+	return;
+#endif
 	r4k_on_each_cpu(local_r4k___flush_cache_all, NULL);
 }
 
@@ -383,11 +390,17 @@ static inline int has_valid_asid(const struct mm_struct *mm)
 
 static void r4k__flush_cache_vmap(void)
 {
+#if defined(CONFIG_CPU_LOONGSON3) && defined(SKIP_CACHEOP)
+	return;
+#endif
 	r4k_blast_dcache();
 }
 
 static void r4k__flush_cache_vunmap(void)
 {
+#if defined(CONFIG_CPU_LOONGSON3) && defined(SKIP_CACHEOP)
+	return;
+#endif
 	r4k_blast_dcache();
 }
 
@@ -396,6 +409,9 @@ static inline void local_r4k_flush_cache_range(void * args)
 	struct vm_area_struct *vma = args;
 	int exec = vma->vm_flags & VM_EXEC;
 
+#if defined(CONFIG_CPU_LOONGSON3) && defined(SKIP_CACHEOP)
+	return;
+#endif
 	if (!(has_valid_asid(vma->vm_mm)))
 		return;
 
@@ -409,6 +425,9 @@ static void r4k_flush_cache_range(struct vm_area_struct *vma,
 {
 	int exec = vma->vm_flags & VM_EXEC;
 
+#if defined(CONFIG_CPU_LOONGSON3) && defined(SKIP_CACHEOP)
+	return;
+#endif
 	if (cpu_has_dc_aliases || (exec && !cpu_has_ic_fills_f_dc))
 		r4k_on_each_cpu(local_r4k_flush_cache_range, vma);
 }
@@ -417,6 +436,9 @@ static inline void local_r4k_flush_cache_mm(void * args)
 {
 	struct mm_struct *mm = args;
 
+#if defined(CONFIG_CPU_LOONGSON3) && defined(SKIP_CACHEOP)
+	return;
+#endif
 	if (!has_valid_asid(mm))
 		return;
 
@@ -439,6 +461,9 @@ static inline void local_r4k_flush_cache_mm(void * args)
 
 static void r4k_flush_cache_mm(struct mm_struct *mm)
 {
+#if defined(CONFIG_CPU_LOONGSON3) && defined(SKIP_CACHEOP)
+	return;
+#endif
 	if (!cpu_has_dc_aliases)
 		return;
 
@@ -466,6 +491,9 @@ static inline void local_r4k_flush_cache_page(void *args)
 	pte_t *ptep;
 	void *vaddr;
 
+#if defined(CONFIG_CPU_LOONGSON3) && defined(SKIP_CACHEOP)
+	return;
+#endif
 	/*
 	 * If ownes no valid ASID yet, cannot possibly have gotten
 	 * this page into the cache.
@@ -530,6 +558,9 @@ static void r4k_flush_cache_page(struct vm_area_struct *vma,
 {
 	struct flush_cache_page_args args;
 
+#if defined(CONFIG_CPU_LOONGSON3) && defined(SKIP_CACHEOP)
+	return;
+#endif
 	args.vma = vma;
 	args.addr = addr;
 	args.pfn = pfn;
@@ -539,11 +570,17 @@ static void r4k_flush_cache_page(struct vm_area_struct *vma,
 
 static inline void local_r4k_flush_data_cache_page(void * addr)
 {
+#if defined(CONFIG_CPU_LOONGSON3) && defined(SKIP_CACHEOP)
+	return;
+#endif
 	r4k_blast_dcache_page((unsigned long) addr);
 }
 
 static void r4k_flush_data_cache_page(unsigned long addr)
 {
+#if defined(CONFIG_CPU_LOONGSON3) && defined(SKIP_CACHEOP)
+	return;
+#endif
 	if (in_atomic())
 		local_r4k_flush_data_cache_page((void *)addr);
 	else
@@ -678,6 +715,9 @@ static void local_r4k_flush_cache_sigtramp(void * arg)
 	unsigned long sc_lsize = cpu_scache_line_size();
 	unsigned long addr = (unsigned long) arg;
 
+#if defined(CONFIG_CPU_LOONGSON3) && defined(SKIP_CACHEOP)
+	return;
+#endif
 	R4600_HIT_CACHEOP_WAR_IMPL;
 	if (dc_lsize)
 		protected_writeback_dcache_line(addr & ~(dc_lsize - 1));
@@ -927,6 +967,34 @@ static void __cpuinit probe_pcache(void)
 		c->dcache.waybit = 0;
 		break;
 
+	case CPU_LOONGSON3:
+		config1 = read_c0_config1();
+                printk("c0_config1 = %lx\n", config1);
+		if ((lsize = ((config1 >> 19) & 7)))
+			c->icache.linesz = 2 << lsize;
+		else
+			c->icache.linesz = lsize;
+		c->icache.sets = 64 << ((config1 >> 22) & 7);
+		c->icache.ways = 1 + ((config1 >> 16) & 7);
+
+		icache_size = c->icache.sets *
+		              c->icache.ways *
+		              c->icache.linesz;
+		c->icache.waybit =0; 
+
+		if ((lsize = ((config1 >> 10) & 7)))
+			c->dcache.linesz = 2 << lsize;
+		else
+			c->dcache.linesz= lsize;
+		c->dcache.sets = 64 << ((config1 >> 13) & 7);
+		c->dcache.ways = 1 + ((config1 >> 7) & 7);
+
+		dcache_size = c->dcache.sets *
+		              c->dcache.ways *
+		              c->dcache.linesz;
+		c->dcache.waybit =0; 
+		break;
+
 	default:
 		if (!(config & MIPS_CONF_M))
 			panic("Don't know how to probe P-caches on this cpu.");
@@ -1152,6 +1220,8 @@ static void __cpuinit setup_scache(void)
 {
 	struct cpuinfo_mips *c = &current_cpu_data;
 	unsigned int config = read_c0_config();
+	unsigned long config2; //cww
+	unsigned int lsize;
 	int sc_present = 0;
 
 	/*
@@ -1196,6 +1266,33 @@ static void __cpuinit setup_scache(void)
 #if defined(CONFIG_CPU_LOONGSON2)
 	case CPU_LOONGSON2:
 		loongson2_sc_init();
+		return;
+#endif
+
+#if defined(CONFIG_CPU_LOONGSON3)
+	case CPU_LOONGSON3:
+		config2=read_c0_config2();
+		printk("c0_config2 = %lx\n", config2);
+		if ((lsize = ((config2 >> 4) & 15)))
+			c->scache.linesz = 2 << lsize;
+		else
+			c->scache.linesz = lsize;
+		
+		c->scache.sets = 64 << ((config2 >> 8) & 15);
+		c->scache.ways = 1 + ((config2  ) & 15);
+
+		scache_size = c->scache.sets *
+				c->scache.ways *
+				c->scache.linesz;
+
+		c->scache.waybit =0; 
+#if 1
+		scache_size *= 4;//gx for godson3 chip
+#endif
+		printk("Unified secondary cache %ldkB %s, linesize %d bytes, waybit=%d.\n",
+			scache_size >> 10, way_string[c->scache.ways], c->scache.linesz, c->scache.waybit);
+
+		if (scache_size) c->options |= MIPS_CPU_INCLUSIVE_CACHES;
 		return;
 #endif
 

@@ -18,8 +18,8 @@ void __init prom_init_memory(void)
 {
 	add_memory_region(0x0, (memsize << 20), BOOT_MEM_RAM);
 
-	add_memory_region(memsize << 20, LOONGSON_PCI_MEM_START - (memsize <<
-				20), BOOT_MEM_RESERVED);
+//	add_memory_region(memsize << 20, LOONGSON_PCI_MEM_START - (memsize <<
+//				20), BOOT_MEM_RESERVED);
 
 #ifdef CONFIG_CPU_SUPPORTS_ADDRWINCFG
 	{
@@ -41,10 +41,10 @@ void __init prom_init_memory(void)
 #ifdef CONFIG_64BIT
 	if (highmemsize > 0)
 		add_memory_region(LOONGSON_HIGHMEM_START,
-				  highmemsize << 20, BOOT_MEM_RAM);
+				  (highmemsize) << 20, BOOT_MEM_RAM);
 
-	add_memory_region(LOONGSON_PCI_MEM_END + 1, LOONGSON_HIGHMEM_START -
-			  LOONGSON_PCI_MEM_END - 1, BOOT_MEM_RESERVED);
+//	add_memory_region(LOONGSON_PCI_MEM_END + 1, LOONGSON_HIGHMEM_START -
+//			  LOONGSON_PCI_MEM_END - 1, BOOT_MEM_RESERVED);
 
 #endif /* !CONFIG_64BIT */
 }

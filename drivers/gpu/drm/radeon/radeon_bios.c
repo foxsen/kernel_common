@@ -29,6 +29,8 @@
 #include "radeon_reg.h"
 #include "radeon.h"
 #include "atom.h"
+#include "vgarom_rs780.h"
+#include <asm/bootinfo.h>
 
 #include <linux/vga_switcheroo.h>
 #include <linux/slab.h>
@@ -46,7 +48,7 @@ static bool igp_read_bios_from_vram(struct radeon_device *rdev)
 {
 	uint8_t __iomem *bios;
 	resource_size_t vram_base;
-	resource_size_t size = 256 * 1024; /* ??? */
+	resource_size_t size = 512 * 1024; /* ??? */
 
 	if (!(rdev->flags & RADEON_IS_IGP))
 		if (!radeon_card_posted(rdev))
@@ -489,6 +491,19 @@ bool radeon_get_bios(struct radeon_device *rdev)
 		r = radeon_read_bios(rdev);
 	if (r == false) {
 		r = radeon_read_disabled_bios(rdev);
+	}
+	if (r == false) {
+		switch (mips_machtype) {
+		case MACH_LEMOTE_3A_A1004:
+			rdev->bios = kmalloc(sizeof(a1004_vgarom), GFP_KERNEL);
+			memcpy(rdev->bios, a1004_vgarom, sizeof(a1004_vgarom));
+			break;
+		default:
+			rdev->bios = kmalloc(sizeof(a1101_vgarom), GFP_KERNEL);
+			memcpy(rdev->bios, a1101_vgarom, sizeof(a1101_vgarom));
+			break;
+		}
+		r = true;
 	}
 	if (r == false || rdev->bios == NULL) {
 		DRM_ERROR("Unable to locate a BIOS ROM\n");

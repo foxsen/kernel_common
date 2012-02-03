@@ -13,23 +13,37 @@
 
 struct device;
 
+extern void prom_printf(char *fmt, ...);
+
 static inline dma_addr_t plat_map_dma_mem(struct device *dev, void *addr,
 					  size_t size)
 {
-	return virt_to_phys(addr) | 0x80000000;
-}
+#ifdef CONFIG_CPU_LOONGSON3
+	if(virt_to_phys(addr) >= 0x100000000){
+//		prom_printf("\n++++++addr(0x%lx)\n", virt_to_phys(addr));
+//		dump_stack();
+	}
 
-static inline dma_addr_t plat_map_dma_mem_page(struct device *dev,
-					       struct page *page)
-{
-	return page_to_phys(page) | 0x80000000;
+	return (virt_to_phys(addr) < 0x10000000) ?
+			(virt_to_phys(addr) | 0x0000000080000000) : virt_to_phys(addr); 
+#else
+	return virt_to_phys(addr) | 0x80000000;
+#endif
 }
 
 static inline unsigned long plat_dma_addr_to_phys(struct device *dev,
 	dma_addr_t dma_addr)
 {
-#if defined(CONFIG_CPU_LOONGSON2F) && defined(CONFIG_64BIT)
+#ifdef CONFIG_64BIT
+#ifdef CONFIG_CPU_LOONGSON3
+	return (dma_addr < 0x90000000 && dma_addr >= 0x80000000) ?
+			(dma_addr & 0x0fffffff) : dma_addr;
+#endif
+
+#ifdef CONFIG_CPU_LOONGSON2F
 	return (dma_addr > 0x8fffffff) ? dma_addr : (dma_addr & 0x0fffffff);
+#endif
+
 #else
 	return dma_addr & 0x7fffffff;
 #endif
@@ -38,6 +52,7 @@ static inline unsigned long plat_dma_addr_to_phys(struct device *dev,
 static inline void plat_unmap_dma_mem(struct device *dev, dma_addr_t dma_addr,
 	size_t size, enum dma_data_direction direction)
 {
+	return;
 }
 
 static inline int plat_dma_supported(struct device *dev, u64 mask)
@@ -66,7 +81,11 @@ static inline int plat_dma_mapping_error(struct device *dev,
 
 static inline int plat_device_is_coherent(struct device *dev)
 {
+#ifdef CONFIG_DMA_NONCOHERENT
 	return 0;
+#else
+	return 1;
+#endif
 }
 
 #endif /* __ASM_MACH_LOONGSON_DMA_COHERENCE_H */

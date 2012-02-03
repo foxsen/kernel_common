@@ -58,6 +58,33 @@ config LEMOTE_MACH2F
 
 	  These family machines include fuloong2f mini PC, yeeloong2f notebook,
 	  LingLoong allinone PC and so forth.
+
+config LEMOTE_MACH3A
+	bool "Lemote Loongson 3A family machines"
+	select ARCH_SPARSEMEM_ENABLE
+	select BOARD_SCACHE
+	select BOOT_ELF32
+	select CSRC_R4K if ! MIPS_EXTERNAL_TIMER
+	select CEVT_R4K if ! MIPS_EXTERNAL_TIMER
+	select CPU_HAS_WB
+	select CPU_UART
+	select GENERIC_ISA_DMA_SUPPORT_BROKEN
+	select GENERIC_HARDIRQS_NO__DO_IRQ
+	select HW_HAS_PCI
+	select I8259
+	select ISA
+	select IRQ_CPU
+	select SYS_HAS_CPU_LOONGSON3A
+	select SYS_HAS_EARLY_PRINTK
+	select SYS_SUPPORTS_SMP
+	select SYS_SUPPORTS_32BIT_KERNEL
+	select SYS_SUPPORTS_64BIT_KERNEL
+	select SYS_SUPPORTS_HIGHMEM
+	select SYS_SUPPORTS_LITTLE_ENDIAN
+	select LOONGSON_MC146818
+	help
+		Lemote Loongson 3A family machines utilize the 3A revision of
+		Loongson processor and RS690/SB700 chipset.
 endchoice
 
 config CS5536
@@ -89,4 +116,32 @@ config LOONGSON_MC146818
 	bool
 	default n
 
+config CPU_UART
+	bool
+	default n
+
+config IOMMU_HELPER
+	bool
+	default n
+
+config NEED_SG_DMA_LENGTH
+	bool
+	default n
+
+config SWIOTLB
+	bool
+	select IOMMU_HELPER
+	select NEED_SG_DMA_LENGTH
+	select NEED_DMA_MAP_STATE
+	default n
+
+config LOONGSON_BIGMEM
+	bool "Soft IOMMU Support for Big Memory (>2GB)"
+	depends on CPU_LOONGSON3A
+	select SWIOTLB
+	select ZONE_DMA32
+
+config ARCH_SPARSEMEM_ENABLE
+	bool
+	select SPARSEMEM_STATIC
 endif # MACH_LOONGSON
