@@ -775,6 +775,11 @@ int radeon_device_init(struct radeon_device *rdev,
 	    (rdev->family < CHIP_RS400))
 		rdev->need_dma32 = true;
 
+#ifdef CONFIG_CPU_LOONGSON3
+	/* Workaround: Loongson 3 doesn't support 40-bits DMA */
+	rdev->need_dma32 = true;
+#endif
+
 	dma_bits = rdev->need_dma32 ? 32 : 40;
 	r = pci_set_dma_mask(rdev->pdev, DMA_BIT_MASK(dma_bits));
 	if (r) {
