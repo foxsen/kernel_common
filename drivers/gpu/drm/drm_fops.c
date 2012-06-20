@@ -258,8 +258,12 @@ static int drm_open_helper(struct inode *inode, struct file *filp,
 	priv->pid = task_pid_nr(current);
 	priv->minor = idr_find(&drm_minors_idr, minor_id);
 	priv->ioctl_count = 0;
+#if 0
 	/* for compatibility root is always authenticated */
 	priv->authenticated = capable(CAP_SYS_ADMIN);
+#else
+	priv->authenticated = 1;
+#endif
 	priv->lock_count = 0;
 
 	INIT_LIST_HEAD(&priv->lhead);
