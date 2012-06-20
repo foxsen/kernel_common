@@ -634,6 +634,9 @@ static long ashmem_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	case ASHMEM_GET_NAME:
 		ret = get_name(asma, (void __user *) arg);
 		break;
+#ifdef CONFIG_COMPAT 
+        case ASHMEM_SET_SIZE_32:
+#endif
 	case ASHMEM_SET_SIZE:
 		ret = -EINVAL;
 		if (!asma->file) {
@@ -644,6 +647,9 @@ static long ashmem_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	case ASHMEM_GET_SIZE:
 		ret = asma->size;
 		break;
+#ifdef CONFIG_COMPAT 
+	case ASHMEM_SET_PROT_MASK_32:
+#endif
 	case ASHMEM_SET_PROT_MASK:
 		ret = set_prot_mask(asma, arg);
 		break;
