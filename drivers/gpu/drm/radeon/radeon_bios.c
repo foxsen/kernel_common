@@ -29,6 +29,7 @@
 #include "radeon_reg.h"
 #include "radeon.h"
 #include "atom.h"
+#include <asm/bootinfo.h>
 
 #include <linux/vga_switcheroo.h>
 #include <linux/slab.h>
@@ -72,6 +73,32 @@ static bool igp_read_bios_from_vram(struct radeon_device *rdev)
 	iounmap(bios);
 	return true;
 }
+
+#ifdef CONFIG_CPU_LOONGSON3
+extern u64 vgabios_addr;
+static bool loongson3_read_bios(struct radeon_device *rdev)
+{
+	u8 *bios;
+	resource_size_t size = 512 * 1024; /* ??? */
+
+	rdev->bios = NULL;
+
+	bios = (u8 *)vgabios_addr;
+	if (!bios) {
+		return false;
+	}
+
+	if (size == 0 || bios[0] != 0x55 || bios[1] != 0xaa) {
+		return false;
+	}
+	rdev->bios = kmalloc(size, GFP_KERNEL);
+	if (rdev->bios == NULL) {
+		return false;
+	}
+	memcpy(rdev->bios, bios, size);
+	return true;
+}
+#endif
 
 static bool radeon_read_bios(struct radeon_device *rdev)
 {
@@ -490,6 +517,11 @@ bool radeon_get_bios(struct radeon_device *rdev)
 	if (r == false) {
 		r = radeon_read_disabled_bios(rdev);
 	}
+#ifdef CONFIG_CPU_LOONGSON3
+	if (r == false) {
+		r = loongson3_read_bios(rdev);
+	}
+#endif
 	if (r == false || rdev->bios == NULL) {
 		DRM_ERROR("Unable to locate a BIOS ROM\n");
 		rdev->bios = NULL;

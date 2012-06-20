@@ -183,7 +183,12 @@ static const struct ata_port_info ahci_port_info[] = {
 	},
 	[board_ahci_sb700] =	/* for SB700 and SB800 */
 	{
+#ifndef CONFIG_CPU_LOONGSON3
 		AHCI_HFLAGS	(AHCI_HFLAG_IGN_SERR_INTERNAL),
+#else
+		AHCI_HFLAGS	(AHCI_HFLAG_IGN_SERR_INTERNAL |
+						AHCI_HFLAG_32BIT_ONLY),
+#endif
 		.flags		= AHCI_FLAG_COMMON,
 		.pio_mask	= ATA_PIO4,
 		.udma_mask	= ATA_UDMA6,

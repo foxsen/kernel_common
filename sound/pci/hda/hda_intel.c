@@ -2772,6 +2772,11 @@ static int __devinit azx_create(struct snd_card *card, struct pci_dev *pci,
 		gcap &= ~ICH6_GCAP_64OK;
 	}
 
+#ifdef CONFIG_CPU_LOONGSON3
+	/* Workaround: Loongson 3 doesn't support 64-bit DMA */
+	gcap &= ~ICH6_GCAP_64OK;
+#endif
+
 	/* disable buffer size rounding to 128-byte multiples if supported */
 	if (align_buffer_size >= 0)
 		chip->align_buffer_size = !!align_buffer_size;

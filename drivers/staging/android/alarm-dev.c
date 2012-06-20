@@ -26,6 +26,10 @@
 #include <linux/wakelock.h>
 #include "android_alarm.h"
 
+#ifdef CONFIG_COMPAT
+#include <linux/compat.h>
+#endif
+
 #define ANDROID_ALARM_PRINT_INFO (1U << 0)
 #define ANDROID_ALARM_PRINT_IO (1U << 1)
 #define ANDROID_ALARM_PRINT_INT (1U << 2)
@@ -47,6 +51,8 @@ module_param_named(debug_mask, debug_mask, int, S_IRUGO | S_IWUSR | S_IWGRP);
 /* support old usespace code */
 #define ANDROID_ALARM_SET_OLD               _IOW('a', 2, time_t) /* set alarm */
 #define ANDROID_ALARM_SET_AND_WAIT_OLD      _IOW('a', 3, time_t)
+#define ANDROID_ALARM_SET_OLD_32            _IOW('a', 2, int) /* set alarm */
+#define ANDROID_ALARM_SET_AND_WAIT_OLD_32   _IOW('a', 3, int)
 
 static int alarm_opened;
 static DEFINE_SPINLOCK(alarm_slock);
@@ -111,6 +117,11 @@ static long alarm_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	struct timespec new_alarm_time;
 	struct timespec new_rtc_time;
 	struct timespec tmp_time;
+#ifdef CONFIG_COMPAT
+	struct timespec_32 new_alarm_time_32;
+	struct timespec_32 new_rtc_time_32;
+	struct timespec_32 tmp_time_32;
+#endif
 	struct rtc_time new_rtc_tm;
 	struct rtc_device *rtc_dev;
 	enum android_alarm_type alarm_type = ANDROID_ALARM_IOCTL_TO_TYPE(cmd);
@@ -119,11 +130,22 @@ static long alarm_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	if (alarm_type >= ANDROID_ALARM_TYPE_COUNT)
 		return -EINVAL;
 
+#ifndef CONFIG_COMPAT
 	if (ANDROID_ALARM_BASE_CMD(cmd) != ANDROID_ALARM_GET_TIME(0)) {
+#else
+	if (ANDROID_ALARM_BASE_CMD(cmd) != ANDROID_ALARM_GET_TIME(0) &&
+	    ANDROID_ALARM_BASE_CMD(cmd) != ANDROID_ALARM_GET_TIME_32(0)) {
+#endif
 		if ((file->f_flags & O_ACCMODE) == O_RDONLY)
 			return -EPERM;
+#ifndef CONFIG_COMPAT
 		if (file->private_data == NULL &&
 		    cmd != ANDROID_ALARM_SET_RTC) {
+#else
+		if (file->private_data == NULL &&
+		    cmd != ANDROID_ALARM_SET_RTC &&
+                    cmd != ANDROID_ALARM_SET_RTC_32) {
+#endif
 			spin_lock_irqsave(&alarm_slock, flags);
 			if (alarm_opened) {
 				spin_unlock_irqrestore(&alarm_slock, flags);
@@ -149,8 +171,16 @@ static long alarm_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		spin_unlock_irqrestore(&alarm_slock, flags);
 		break;
 
+#ifndef CONFIG_COMPAT
 	case ANDROID_ALARM_SET_OLD:
 	case ANDROID_ALARM_SET_AND_WAIT_OLD:
+#else
+/* cannot support both, ANDROID_ALARM_SET_OLD conflict with ANDROID_ALARM_SET_32,
+   we have to choose 32bit only. Anyway, we won't have 64bit userland 
+ */
+	case ANDROID_ALARM_SET_OLD_32:
+	case ANDROID_ALARM_SET_AND_WAIT_OLD_32:
+#endif
 		if (get_user(new_alarm_time.tv_sec, (int __user *)arg)) {
 			rv = -EFAULT;
 			goto err1;
@@ -165,6 +195,18 @@ static long alarm_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 			rv = -EFAULT;
 			goto err1;
 		}
+#ifdef CONFIG_COMPAT
+		goto from_old_alarm_set;
+	case ANDROID_ALARM_SET_AND_WAIT_32(0):
+	case ANDROID_ALARM_SET_32(0):
+		if (copy_from_user(&new_alarm_time_32, (void __user *)arg,
+		    sizeof(new_alarm_time_32))) {
+			rv = -EFAULT;
+			goto err1;
+		}
+		new_alarm_time.tv_sec = new_alarm_time_32.tv_sec;
+		new_alarm_time.tv_nsec = new_alarm_time_32.tv_nsec;
+#endif
 from_old_alarm_set:
 		spin_lock_irqsave(&alarm_slock, flags);
 		pr_alarm(IO, "alarm %d set %ld.%09ld\n", alarm_type,
@@ -173,9 +215,17 @@ from_old_alarm_set:
 		devalarm_start(&alarms[alarm_type],
 			timespec_to_ktime(new_alarm_time));
 		spin_unlock_irqrestore(&alarm_slock, flags);
+#ifdef CONFIG_COMPAT
+		if (ANDROID_ALARM_BASE_CMD(cmd) != ANDROID_ALARM_SET_AND_WAIT(0)
+		    && cmd != ANDROID_ALARM_SET_AND_WAIT_OLD 
+		    && ANDROID_ALARM_BASE_CMD(cmd) != ANDROID_ALARM_SET_AND_WAIT_32(0)
+		    && cmd != ANDROID_ALARM_SET_AND_WAIT_OLD_32)
+			break;
+#else
 		if (ANDROID_ALARM_BASE_CMD(cmd) != ANDROID_ALARM_SET_AND_WAIT(0)
 		    && cmd != ANDROID_ALARM_SET_AND_WAIT_OLD)
 			break;
+#endif
 		/* fall though */
 	case ANDROID_ALARM_WAIT:
 		spin_lock_irqsave(&alarm_slock, flags);
@@ -200,6 +250,18 @@ from_old_alarm_set:
 			rv = -EFAULT;
 			goto err1;
 		}
+		goto set_rtc;
+#ifdef CONFIG_COMPAT
+	case ANDROID_ALARM_SET_RTC_32:
+		if (copy_from_user(&new_rtc_time_32, (void __user *)arg,
+		    sizeof(new_rtc_time_32))) {
+			rv = -EFAULT;
+			goto err1;
+		}
+		new_rtc_time.tv_sec = new_rtc_time_32.tv_sec;
+		new_rtc_time.tv_nsec = new_rtc_time_32.tv_nsec;
+#endif
+set_rtc:
 		rtc_time_to_tm(new_rtc_time.tv_sec, &new_rtc_tm);
 		rtc_dev = alarmtimer_get_rtcdev();
 		rv = do_settimeofday(&new_rtc_time);
@@ -235,6 +297,31 @@ from_old_alarm_set:
 			goto err1;
 		}
 		break;
+#ifdef CONFIG_COMPAT
+	case ANDROID_ALARM_GET_TIME_32(0):
+		switch (alarm_type) {
+		case ANDROID_ALARM_RTC_WAKEUP:
+		case ANDROID_ALARM_RTC:
+			getnstimeofday(&tmp_time);
+			break;
+		case ANDROID_ALARM_ELAPSED_REALTIME_WAKEUP:
+		case ANDROID_ALARM_ELAPSED_REALTIME:
+			get_monotonic_boottime(&tmp_time);
+			break;
+		case ANDROID_ALARM_TYPE_COUNT:
+		case ANDROID_ALARM_SYSTEMTIME:
+			ktime_get_ts(&tmp_time);
+			break;
+		}
+		tmp_time_32.tv_sec = tmp_time.tv_sec;
+		tmp_time_32.tv_nsec = tmp_time.tv_nsec;
+		if (copy_to_user((void __user *)arg, &tmp_time_32,
+		    sizeof(tmp_time_32))) {
+			rv = -EFAULT;
+			goto err1;
+		}
+		break;
+#endif
 
 	default:
 		rv = -EINVAL;
@@ -243,6 +330,13 @@ from_old_alarm_set:
 err1:
 	return rv;
 }
+
+#ifdef CONFIG_COMPAT
+static long alarm_compat_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
+{
+	return alarm_ioctl(file, cmd, (unsigned long)compat_ptr(arg));
+}
+#endif
 
 static int alarm_open(struct inode *inode, struct file *file)
 {
@@ -323,6 +417,9 @@ static const struct file_operations alarm_fops = {
 	.unlocked_ioctl = alarm_ioctl,
 	.open = alarm_open,
 	.release = alarm_release,
+#ifdef CONFIG_COMPAT
+	.compat_ioctl = alarm_compat_ioctl,
+#endif
 };
 
 static struct miscdevice alarm_device = {
