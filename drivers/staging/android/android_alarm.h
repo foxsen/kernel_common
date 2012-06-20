@@ -44,6 +44,11 @@ enum android_alarm_return_flags {
 	ANDROID_ALARM_TIME_CHANGE_MASK = 1U << 16
 };
 
+struct timespec_32 {
+	int tv_sec;
+        int tv_nsec;
+};
+
 /* Disable alarm */
 #define ANDROID_ALARM_CLEAR(type)           _IO('a', 0 | ((type) << 4))
 
@@ -58,5 +63,10 @@ enum android_alarm_return_flags {
 #define ANDROID_ALARM_SET_RTC               _IOW('a', 5, struct timespec)
 #define ANDROID_ALARM_BASE_CMD(cmd)         (cmd & ~(_IOC(0, 0, 0xf0, 0)))
 #define ANDROID_ALARM_IOCTL_TO_TYPE(cmd)    (_IOC_NR(cmd) >> 4)
+
+#define ANDROID_ALARM_SET_32(type)             ALARM_IOW(2, type, struct timespec_32)
+#define ANDROID_ALARM_SET_AND_WAIT_32(type)    ALARM_IOW(3, type, struct timespec_32)
+#define ANDROID_ALARM_GET_TIME_32(type)        ALARM_IOW(4, type, struct timespec_32)
+#define ANDROID_ALARM_SET_RTC_32               _IOW('a', 5, struct timespec_32)
 
 #endif
