@@ -3726,6 +3726,12 @@ void do_blank_screen(int entering_gfx)
 	struct vc_data *vc = vc_cons[fg_console].d;
 	int i;
 
+#if defined(CONFIG_LEMOTE_MACH3A) && defined(CONFIG_ANDROID)
+	/* android screen will fail to resume without this, probably we need
+           to set graphics mode in vc, hack for now */
+	return;
+#endif
+
 	WARN_CONSOLE_UNLOCKED();
 
 	if (console_blanked) {
